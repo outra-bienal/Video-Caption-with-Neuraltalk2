@@ -1,22 +1,23 @@
 #! /usr/bin/env python
+from tqdm import tqdm
 from numpy import *
 import sys
 import os
 import pandas as pd
 #------------------------------------------------#
 # Make sure that caffe is on the python path:
-caffe_root = '/wrk/gcao/caffe/'  # this file is expected to be in {caffe_root}/examples
+caffe_root = '/home/bernardo/workspace/caffe/'  # this file is expected to be in {caffe_root}/examples
 # change the path below to the directory of your video frames.
-input_path = '/homeappl/home/gcao/tmp/Video-Caption/data/santa/'
+input_path = '/home/bernardo/workspace/bienal/Video-Caption/data/percurso_1/'
 #------------------------------------------------#
 sys.path.insert(0, caffe_root + 'python')
 import caffe
 #sys.path.insert(0, '/homeappl/home/gcao/fa/misc/')
-from fileproc import loadstr, writestr 
+from fileproc import loadstr, writestr
 
 def setup():
     #caffe.set_mode_cpu()
-    net = caffe.Net(caffe_root + 'models/VGG_ILSVRC_16_layers/VGG_ILSVRC_16_layers_deploy.prototxt', caffe_root + 'models/VGG_ILSVRC_16_layers/VGG_ILSVRC_16_layers.caffemodel', caffe.TEST)
+    net = caffe.Net(caffe_root + 'models/VGG_ILSVRC_16_layers_deploy.prototxt', caffe_root + 'models/VGG_ILSVRC_16_layers.caffemodel', caffe.TEST)
     # input preprocessing: 'data' is the name of the input blob == net.inputs[0]
     transformer = caffe.io.Transformer({'data': net.blobs['data'].data.shape})
     transformer.set_transpose('data', (2,0,1))
@@ -30,24 +31,23 @@ def setup():
 
 def extract(filenames, net, transformer):
     feats = []
-    for i in xrange(len(filenames)):
+    for i in tqdm(range(len(filenames))):
         filename = filenames[i]
         net.blobs['data'].data[...] = transformer.preprocess('data', caffe.io.load_image(img_path + filename))
         out = net.forward()
-        print("Predicted class is #{}.".format(out['prob'].argmax()))
         feat = net.blobs['fc8'].data[0]
         feats.append(feat.copy())
     return feats
 
 def writeFV(img_files, feats):
-    out_filename = input_path + 'feat.txt' 
-    with file(out_filename, 'w') as outfile:
+    out_filename = input_path + 'feat.txt'
+    with open(out_filename, 'w') as outfile:
         for idx,x in enumerate(feats):
-            indexes	= x.nonzero()[0]
-            values	= x[indexes]
-            
+            indexes = x.nonzero()[0]
+            values = x[indexes]
+
             label = '+1' # We set the label as 1 by default
-            pairs = ['%i:%f'%(indexes[i]+1,values[i]) for i in xrange(len(indexes))]
+            pairs = ['%i:%f'%(indexes[i]+1,values[i]) for i in range(len(indexes))]
             sep_line = [label]
             sep_line.extend(pairs)
             sep_line.extend(['#' + str(img_files[idx])])
@@ -64,7 +64,7 @@ def loadFiles():
     from os import listdir
     from os.path import isfile, join
     img_files = [ f for f in listdir(img_path) if isfile(join(img_path, f)) and '.jpg' in f]
-    print shape(img_files)
+    print(shape(img_files))
     return sorted(img_files)
 
 def main():

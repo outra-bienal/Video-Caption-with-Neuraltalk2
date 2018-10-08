@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+from tqdm import tqdm
 from numpy import *
 import sys
 from scipy import misc
@@ -20,11 +21,11 @@ def processImg(img):
     histG = list(ndimage.measurements.histogram(G, 0, 255, 20))
     histB = list(ndimage.measurements.histogram(B, 0, 255, 20))
     hist = mat(histR + histG + histB) / (rows * cols)
-    return hist 
- 
+    return hist
+
 def genKeyframes():
     Thresh = .2 # We pre-define the threhold to differentiate the key frames.
-    dataDir = root_path + 'data/santa/img/' 
+    dataDir = root_path + 'data/percurso_1/img/'
     # Get all image frames
     from os import listdir
     from os.path import isfile, join
@@ -33,20 +34,19 @@ def genKeyframes():
     keyFrames = []
     hist_ref = processImg(dataDir + img_files[0])
     keyFrames.append(img_files[0])
-    for f in img_files:
-        print f
+    for f in tqdm(img_files, 'Generating key frames'):
         hist = processImg(dataDir + f)
         if dist_metrics.eucl_dist(hist_ref, hist) > Thresh:
             keyFrames.append(f)
             hist_ref = hist # Use the first frame of a shot as ref..
-    print shape(keyFrames)
-    writestr(root_path + 'keyframes_santa.list', keyFrames)
+    print(shape(keyFrames))
+    writestr(root_path + 'keyframes_percurso_1.list', keyFrames)
 
 def copyKeyframes():
     from shutil import copyfile
-    keys = loadstr(root_path + 'keyframes_santa.list')
+    keys = loadstr(root_path + 'keyframes_percurso_1.list')
     for k in keys:
-        copyfile(root_path + 'data/santa/img/'+k, root_path + 'data/santa/key/'+k)
+        copyfile(root_path + 'data/percurso_1/img/'+k, root_path + 'data/percurso_1/key/'+k)
 
 def parseOutput():
     srt_dict = {}
@@ -60,17 +60,18 @@ def parseOutput():
     return srt_dict
 
 def genSrt(srt_dict):
-    keys = loadstr(root_path + 'keyframes_santa.list')
+    keys = loadstr(root_path + 'keyframes_percurso_1.list')
     lines = []
     lines.append(1)
-    num = double(keys[0][1:5]) -1 
+    num = double(keys[0][1:5]) -1
     hour = '00'
     minute = str(int(num/5/60)).zfill(2)
     second = str(num/5.0%60).replace('.',',').zfill(4)
     start_t = hour + ':' + minute + ':' + second + '00'
-    srt = srt_dict[root_path + 'data/santa/key/' + keys[0]]
+
+    srt = srt_dict[root_path + 'data/percurso_1/key/' + keys[0]]
     for k,i in zip(keys[1:], range(1,len(keys))):
-        num = double(k[1:5]) 
+        num = double(k[1:5])
         minute = str(int(num/5/60)).zfill(2)
         second = str(num/5.0%60).replace('.',',').zfill(4)
         end_t = hour + ':' + minute + ':' + second + '00'
@@ -78,18 +79,18 @@ def genSrt(srt_dict):
         lines.append(srt)
         lines.append('')
         start_t = hour + ':' + minute + ':' + second + '25'
-        srt = srt_dict[root_path + 'data/santa/key/' + k]
+        srt = srt_dict[root_path + 'data/percurso_1/key/' + k]
         lines.append(int(i)+1)
     end_t = hour + ':' + minute + ':' + second + '25'
     lines.append(start_t + ' --> ' + end_t)
     lines.append(srt)
-    writestr(root_path + 'santa.srt', lines)
-    
+    writestr(root_path + 'percurso_1.srt', lines)
+
 def main():
     global root_path
     root_path = sys.argv[1]
     task = sys.argv[2]
-    if task == 'genKeyframes': 
+    if task == 'genKeyframes':
         genKeyframes()
         copyKeyframes()
     elif task == 'genSrt':
